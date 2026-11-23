@@ -26,4 +26,6 @@ A product manager can't read every line an agent writes. What they need is a sho
 
 **The labeler and the tool should differ.** The labels are the answer key the tool will be scored against later. If the same model with the same inputs wrote both, a high score would only show that the model agrees with itself. The labeler uses a stronger model with the full request and diff. The tool will use a smaller model, and Samyak checks a sample of the labels by hand.
 
+**The tool has to see everything the PM said.** The first version of the request reader missed two things. It counted Claude's own summaries of long sessions as if Samyak had written them, and it skipped messages he typed while the agent was mid-task. Almost a third of commits had at least one of those mid-task messages. With the full request, the number of decisions labeled "the agent's own call" on the affected commits fell from 31 to 22. Without it, the tool would have asked him to approve decisions he had already made.
+
 **Verify what you can verify.** "Don't invent quotes" is an instruction a model can ignore. "Every quote must be found in the diff" is a check a script can run. Where a rule can be checked mechanically, it is.
