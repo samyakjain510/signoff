@@ -11,4 +11,5 @@ What was done, by whom (Claude or Samyak), and what was checked by hand.
 | 2026-11-22 | AIDev sample: 360 merged agent PRs with linked issues, 60 per agent, seed 7 | Claude (script) | Not yet |
 | 2026-11-22 | PR-MCI human labels downloaded (600 validation PRs, 432 with failure types) | Researchers (Gong et al.) | Their two annotators, kappa 0.892 |
 | 2026-11-22 | Reference labels for 60 commits drafted by Claude Sonnet via `claude -p` | Claude | Script checked every evidence quote exists in the diff; Samyak to review a sample of 10 |
+| 2026-11-23 | Found and fixed two gaps in request linking (Claude's compaction summaries counted as the user; mid-task messages missed); 21 commits relabeled | Claude | Claude traced one wrong label (Internships split) back to the missed mid-task message by reading the transcript |
 

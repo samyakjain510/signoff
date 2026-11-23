@@ -20,12 +20,29 @@ from pathlib import Path
 
 REMINDER = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
 # Wrappers Claude Code puts around non-typed input (slash commands, hooks, etc.)
+COMPACT_PREFIX = "This session is being continued from a previous conversation"
 NOISE_TAGS = re.compile(r"<(command-[a-z-]+|local-command-[a-z-]+|bash-[a-z-]+)>.*?</\1>", re.S)
 
 
 def user_text(rec: dict) -> str | None:
-    """The text a person typed in a user record, or None for tool results and meta records."""
+    """The text a person typed, or None for tool results, meta records and Claude's own summaries.
+
+    Two places hold typed text: normal user records, and messages sent while the
+    agent was mid-task, which Claude Code stores as a `queued_command` attachment.
+    """
+    att = rec.get("attachment") if rec.get("type") == "attachment" else None
+    if isinstance(att, dict) and att.get("type") == "queued_command":
+        human = (att.get("origin") or {}).get("kind") == "human" or att.get("humanTurn")
+        prompt = att.get("prompt") or ""
+        if isinstance(prompt, list):  # text plus pasted images, as content blocks
+            prompt = "\n".join(b.get("text", "") for b in prompt if isinstance(b, dict) and b.get("type") == "text")
+        text = REMINDER.sub("", prompt).strip() if human and not rec.get("isSidechain") else ""
+        return text or None
     if rec.get("type") != "user" or rec.get("isMeta") or rec.get("isSidechain"):
+        return None
+    # When a long session is compacted, Claude Code stores its own summary as a
+    # user record. Those are Claude's words, not the person's request.
+    if rec.get("isCompactSummary"):
         return None
     content = rec.get("message", {}).get("content")
     if isinstance(content, str):
@@ -37,6 +54,8 @@ def user_text(rec: dict) -> str | None:
     else:
         return None
     text = NOISE_TAGS.sub("", REMINDER.sub("", "\n".join(parts))).strip()
+    if text.startswith(COMPACT_PREFIX):  # older versions may not set the flag
+        return None
     return text or None
 
 
@@ -87,7 +106,9 @@ def link(records: list[dict], tdir: Path, exclude: set[str]) -> list[dict]:
         for rec in session:
             text = user_text(rec)
             if text:
-                typed.append({"time": rec.get("timestamp"), "text": text})
+                # A queued message can also show up later as a normal one; keep it once.
+                if not any(m["text"] == text for m in typed):
+                    typed.append({"time": rec.get("timestamp"), "text": text})
                 continue
             for cmd in commit_commands(rec):
                 hit = next((s for s in subjects if s in cmd), None)

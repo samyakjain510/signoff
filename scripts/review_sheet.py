@@ -26,6 +26,10 @@ TYPE_NAMES = {
     "dependency_cost": "Dependency or cost", "removed_feature": "Removed feature",
 }
 WHO_NAMES = {"asked": "you asked for it", "implied": "your request implied it", "agent": "the agent's own call"}
+Q_REAL = [("yes", "Yes"), ("no", "No"), ("unsure", "Unsure")]
+Q_WHO = [("asked", "I asked"), ("implied", "My request implied it"), ("agent", "Agent's own call")]
+Q_APPROVE = [("yes", "Yes"), ("no", "No, telling me after is fine"), ("never", "No, I don't need to hear about it")]
+Q_MISSED = [("no", "No, nothing missed"), ("yes", "Yes, something was missed")]
 
 
 def load():
@@ -111,15 +115,15 @@ def render(picks) -> str:
                 f'<p class="why">{html.escape(d["why_it_matters"])}</p>{ev}</div>'
             )
             qs = (
-                f'<div class="q"><span>Is this a real product decision?</span>{radio(f"q{n}a", [("yes","Yes"),("no","No"),("unsure","Unsure")])}</div>'
-                f'<div class="q"><span>Who made it?</span>{radio(f"q{n}b", [("asked","I asked"),("implied","My request implied it"),("agent","Agent\'s own call")])}</div>'
-                f'<div class="q"><span>Would you have wanted to approve it before it shipped?</span>{radio(f"q{n}c", [("yes","Yes"),("no","No, telling me after is fine"),("never","No, I don\'t need to hear about it")])}</div>'
+                f'<div class="q"><span>Is this a real product decision?</span>{radio(f"q{n}a", Q_REAL)}</div>'
+                f'<div class="q"><span>Who made it?</span>{radio(f"q{n}b", Q_WHO)}</div>'
+                f'<div class="q"><span>Would you have wanted to approve it before it shipped?</span>{radio(f"q{n}c", Q_APPROVE)}</div>'
             )
         else:
             body = (f'<div class="dec"><span class="tag">labeler found no product decisions</span>'
                     f'<p class="what">{html.escape(row["label"]["user_summary"])}</p></div>')
             qs = (f'<div class="q"><span>Did this commit contain a product decision you care about?</span>'
-                  f'{radio(f"q{n}a", [("no","No, nothing missed"),("yes","Yes, something was missed")])}</div>'
+                  f'{radio(f"q{n}a", Q_MISSED)}</div>'
                   f'<div class="q"><span>If yes, what? (optional)</span><input class="txt" name="q{n}note"></div>')
         cards.append(f'<section class="card" data-n="{n}">{head}{req_html}{body}{qs}</section>')
 
@@ -132,7 +136,8 @@ main {{ max-width:760px; margin:0 auto; padding:24px 16px 80px; }}
 h1 {{ font-size:22px; margin:0 0 4px; }} .lede {{ color:var(--muted); margin:0 0 20px; }}
 .card {{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:0 0 16px; }}
 .meta {{ color:var(--muted); font-size:13px; margin-bottom:10px; }} code {{ font-size:12px; }}
-.req {{ border-left:3px solid var(--line); padding-left:10px; margin-bottom:12px; }} .req p {{ margin:4px 0 0; white-space:pre-wrap; color:var(--muted); font-size:14px; }}
+.card, .req p, .what, .why, pre {{ overflow-wrap:anywhere; }}
+.req {{ border-left:3px solid var(--line); padding-left:10px; margin-bottom:12px; }} .req p {{ margin:4px 0 0; white-space:pre-wrap; color:var(--muted); font-size:14px; max-height:12em; overflow-y:auto; }}
 .tag {{ display:inline-block; font-size:12px; border:1px solid var(--line); border-radius:99px; padding:1px 8px; margin:0 6px 6px 0; }}
 .what {{ font-weight:600; margin:6px 0 2px; }} .why {{ margin:0 0 8px; color:var(--muted); }}
 pre {{ background:#f4f4f7; border-radius:6px; padding:8px; font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:6px 0; }} .f {{ color:var(--muted); }}
