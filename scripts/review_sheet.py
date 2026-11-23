@@ -57,10 +57,24 @@ def excerpt(text: str, quote: str, width: int = 420) -> str:
     return ("..." if start else "") + text[start:start + width] + ("..." if start + width < len(text) else "")
 
 
+def agent_commits() -> set[str]:
+    """Commits an agent co-wrote. A setup tool's starter commit has no request to judge against."""
+    shas = set()
+    for repo in REPOS:
+        for l in open(DATA / "records" / f"{repo}.jsonl"):
+            r = json.loads(l)
+            if r["agent"]:
+                shas.add(r["sha"])
+    return shas
+
+
 def pick(items, seed=7):
     rng = random.Random(seed)
+    by_agent = agent_commits()
     agent, asked, empty = [], [], []
     for repo, row, req in items:
+        if row["sha"] not in by_agent:
+            continue
         decs = row["label"]["decisions"]
         if not decs:
             empty.append((repo, row, req, None))
@@ -68,28 +82,29 @@ def pick(items, seed=7):
             (agent if d["who"] == "agent" else asked).append((repo, row, req, d))
     for pool in (agent, asked, empty):
         rng.shuffle(pool)
+    seen_commits: set[str] = set()
 
     def spread(pool, n):
-        """Prefer variety: different types, then both repos, then hard-to-undo."""
-        chosen, seen_types, seen_commits = [], set(), set()
-        for repo, row, req, d in sorted(pool, key=lambda x: (x[3] or {}).get("undo") != "hard"):
-            key = (d or {}).get("type")
-            if row["sha"] in seen_commits or (key in seen_types and len(seen_types) < 5):
-                continue
-            chosen.append((repo, row, req, d))
-            seen_types.add(key)
-            seen_commits.add(row["sha"])
-            if len(chosen) == n:
+        """One item per commit across the whole sheet, alternating repos, preferring
+        new decision types and hard-to-undo decisions."""
+        pool = sorted(pool, key=lambda x: (x[3] or {}).get("undo") != "hard")  # stable: keeps shuffle order
+        chosen, seen_types = [], set()
+        for i in range(n):
+            want = REPOS[i % len(REPOS)]
+            ok = [x for x in pool if x[1]["sha"] not in seen_commits]
+            choice = (
+                next((x for x in ok if x[0] == want and (x[3] or {}).get("type") not in seen_types), None)
+                or next((x for x in ok if x[0] == want), None)
+                or next(iter(ok), None)
+            )
+            if choice is None:
                 break
-        for x in pool:  # top up if variety rules left gaps
-            if len(chosen) == n:
-                break
-            if x not in chosen and x[1]["sha"] not in seen_commits:
-                chosen.append(x)
-                seen_commits.add(x[1]["sha"])
+            chosen.append(choice)
+            seen_commits.add(choice[1]["sha"])
+            seen_types.add((choice[3] or {}).get("type"))
         return chosen
 
-    return spread(agent, 5) + spread(asked, 3) + empty[:2]
+    return spread(agent, 5) + spread(asked, 3) + spread(empty, 2)
 
 
 def radio(name: str, options: list[tuple[str, str]]) -> str:
