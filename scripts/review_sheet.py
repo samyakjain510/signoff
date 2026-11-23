@@ -115,6 +115,9 @@ def radio(name: str, options: list[tuple[str, str]]) -> str:
 
 
 def render(picks) -> str:
+    # Answers save in the browser under a key tied to these exact items,
+    # so a rebuilt sheet with different items never shows old answers.
+    sheet_id = "signoff-review-" + "-".join(row["short"] for _, row, _, _ in picks)
     cards = []
     for n, (repo, row, req, d) in enumerate(picks, 1):
         head = (f'<div class="meta">{n} of {len(picks)} · {html.escape(repo)} · '
@@ -163,7 +166,7 @@ button {{ background:var(--accent); color:#fff; border:0; border-radius:8px; pad
 #out {{ width:100%; min-height:70px; margin-top:8px; font:12px ui-monospace, monospace; }}
 </style></head><body><main>
 <h1>Check 10 labels</h1>
-<p class="lede">Claude drafted these from your requests and the code. Answer what you can. Nothing here leaves your Mac. When done, press the button and paste the line into the chat.</p>
+<p class="lede">Claude drafted these from your requests and the code. Answer what you can. Nothing here leaves your Mac. Your answers save in this browser as you go. When done, press the button and paste the line into the chat.</p>
 {''.join(cards)}
 <div class="done"><button onclick="collect()">Copy my answers</button><textarea id="out" readonly placeholder="Your answers appear here"></textarea></div>
 </main><script>
@@ -179,6 +182,27 @@ function collect() {{
   const out = document.getElementById('out'); out.value = s; out.select();
   try {{ navigator.clipboard.writeText(s); }} catch (e) {{}}
 }}
+const KEY = {json.dumps(sheet_id)};
+function save() {{
+  const s = {{}};
+  document.querySelectorAll('.card input').forEach(el => {{
+    if (el.type === 'radio') {{ if (el.checked) s[el.name] = el.value; }}
+    else if (el.value) s[el.name] = el.value;
+  }});
+  try {{ localStorage.setItem(KEY, JSON.stringify(s)); }} catch (e) {{}}
+}}
+function restore() {{
+  let s = {{}};
+  try {{ s = JSON.parse(localStorage.getItem(KEY) || '{{}}'); }} catch (e) {{}}
+  document.querySelectorAll('.card input').forEach(el => {{
+    if (!(el.name in s)) return;
+    if (el.type === 'radio') el.checked = (el.value === s[el.name]);
+    else el.value = s[el.name];
+  }});
+}}
+document.addEventListener('change', save);
+document.addEventListener('input', save);
+restore();
 </script></body></html>"""
 
 
