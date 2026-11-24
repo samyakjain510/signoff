@@ -12,6 +12,20 @@ It was too strict. Of 24 descriptions the humans called aligned, it marked 15 as
 
 **Why it matters:** an unchecked judge would have reported most descriptions as flawed. Every judge number in the write-up sits next to its calibration result.
 
+## 2026-11-23: a review bot's badge was read as the author
+
+The first demo set was meant to be "the 25 most recent merged pull requests an agent wrote" in a public project. 23 of them were attributed to Devin. They were not written by Devin: each description carried a badge from Devin Review, a code-review bot, and the detection matched the word. Several of those pull requests showed no sign of an agent at all.
+
+**What changed:** only authorship counts: an agent account opened the PR, its description carries an agent's own signature (a "Generated with Claude Code" line or an agent session link), or one of its commits has an agent in a Co-Authored-By line. A unit test covers the badge. The demo set was rebuilt; all 25 now name Claude in the PR or its commits.
+
+**Why it matters:** "which changes did an agent write" is the first filter the tool applies, and the tool's own attribution was wrong before any model was involved. I caught it only because the feed said "written by devin" on a project I knew used Claude Code.
+
+## 2026-11-23: small bugs found by running the real thing
+
+- An empty commit ("Redeploy with GitHub-linked author") has no diff file, and the tool crashed on it. Now an empty diff is reviewed as empty.
+- The feed page named a function `top`, which every browser already defines (`window.top`), so the page rendered blank. The unit tests did not catch it because they never ran the page in a browser; the browser check did.
+- Approving a held push crashed if the input ended before "yes" was typed. It now approves nothing and says so.
+
 ## 2026-11-23: one calibration PR was blocked by a safety filter
 
 One test PR (a security-related code change) was blocked by Anthropic's cybersecurity safeguards on every attempt. It was left out, so the test set has 71 PRs, not 72. The same filter could block the tool on real security work; the tool records the error and shows the change as "not reviewed" rather than hiding it.

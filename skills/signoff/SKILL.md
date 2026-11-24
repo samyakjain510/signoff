@@ -22,7 +22,12 @@ PYTHONPATH="<plugin root>" python3 -m signoff <command> ...
    Tell the user how many changes there are and that each one is one Haiku call on their plan (about 5 to 50 seconds each). Ask before running more than 30.
 3. Run the same command without `--dry-run`, adding `--text`. Results are kept in `~/.signoff/<name>/`, so a second run only reviews new changes.
 4. Report back in plain words: how many changes need sign-off and how many are to read, then each "NEEDS SIGN-OFF" item with its one-line reason. Give the path to `feed.html` and offer to open it.
-5. To change which decisions need sign-off: `python3 -m signoff policy > signoff.toml`, edit the file with the user, then pass `--policy signoff.toml` (or rebuild with `python3 -m signoff feed ~/.signoff/<name> --policy signoff.toml --text`). The feed page also has a "Sign-off rules" panel that exports this file.
+5. To change which decisions need sign-off: `python3 -m signoff policy > signoff.toml`, edit the file with the user, then pass `--policy signoff.toml` (or rebuild with `python3 -m signoff feed ~/.signoff/<name> --policy signoff.toml --text`). A `signoff.toml` at the repo root is picked up automatically. The feed page also has a "Sign-off rules" panel that exports this file.
+6. To hold pushes for sign-off, offer `python3 -m signoff hook install --repo <path>` (a git pre-push hook). Ask first: it changes how pushes behave in that repo.
+
+## When a push is held
+
+If a `git push` fails with "signoff: this push is on hold", tell the user which commits and decisions are held, in plain words, and stop. Never run `signoff approve` yourself and never retry with `--no-verify`. Approval is the user's decision, and the approve command only accepts input typed by a person in a terminal.
 
 ## Rules
 

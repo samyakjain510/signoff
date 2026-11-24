@@ -65,12 +65,15 @@ def carry_requests(links: list[dict]) -> dict[str, dict]:
 
 
 def git_changes(repo: Path, out_dir: Path, since: str | None = None, limit: int | None = None,
-                transcripts: Path | None = None, agent_only: bool = False) -> list[dict]:
+                transcripts: Path | None = None, agent_only: bool = False,
+                shas: list[str] | None = None) -> list[dict]:
+    """Changes for the given commits, or for the most recent ones on HEAD."""
     repo = repo.resolve()
-    args = ["rev-list", "--reverse", "--no-merges"] + ([f"--since={since}"] if since else []) + ["HEAD"]
-    shas = gitlog.git(repo, *args).split()
-    if limit:
-        shas = shas[-limit:]
+    if shas is None:
+        args = ["rev-list", "--reverse", "--no-merges"] + ([f"--since={since}"] if since else []) + ["HEAD"]
+        shas = gitlog.git(repo, *args).split()
+        if limit:
+            shas = shas[-limit:]
     head = set(gitlog.git(repo, "rev-list", "HEAD").split())
     diff_dir = out_dir / "diffs"
     diff_dir.mkdir(parents=True, exist_ok=True)

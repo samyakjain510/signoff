@@ -1,0 +1,17 @@
+{
+  "commits": 20,
+  "same_outcome": "18/20 (90%)",
+  "same_hold_decision": "19/20 (95%)",
+  "held_first_run": 7,
+  "held_second_run": 6,
+  "outcome_pairs": {
+    "notify->notify": 7,
+    "notify->silent": 1,
+    "sign-off->notify": 1,
+    "sign-off->sign-off": 6,
+    "silent->silent": 5
+  },
+  "decisions_first_run": 87,
+  "decisions_second_run": 86,
+  "mean_abs_difference_in_decisions": 1.2
+}

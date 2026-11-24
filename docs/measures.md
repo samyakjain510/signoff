@@ -73,6 +73,10 @@ Two product rules apply to every tool policy (D, E, F), fixed before the first r
 - Correction finder: Sonnet, medium effort.
 - All calls run through `claude -p` on the Pro plan with tools switched off.
 
+### Added 2026-11-23, before running: stability
+
+A gate that gives a different answer each time it runs is hard to trust. The tool is run a second time on 20 of the 60 commits (drawn with seed 7). Reported: how often the commit's outcome under the default tiers (held, to read, quiet) is the same on both runs, and how the number of decisions differs.
+
 ## Known limits, stated in advance
 
 - One PM, two repos, 60 commits. The results describe this person's work, not PMs in general.

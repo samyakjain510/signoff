@@ -5,6 +5,8 @@ product decisions flagged and the ones you choose held for your sign-off.
     python3 -m signoff github OWNER/NAME [--prs 20] [--agent-only]
     python3 -m signoff feed OUT_DIR [--policy signoff.toml] [--text]
     python3 -m signoff policy > signoff.toml
+    python3 -m signoff hook install          # hold pushes that need your sign-off
+    python3 -m signoff approve <commit>      # approve a held commit (in a terminal)
 
 The model work runs through your own Claude Code (`claude -p`, Haiku by
 default, tools off). Reading the repo is read-only. Results go to
@@ -33,6 +35,15 @@ def latest_reviews(path: Path) -> dict[str, dict]:
         if "out" in row or row["id"] not in out:
             out[row["id"]] = row
     return out
+
+
+def transcripts_dir(arg: str) -> Path | None:
+    if arg == "none":
+        return None
+    if arg == "auto":
+        t = Path.home() / ".claude" / "projects"
+        return t if t.exists() else None
+    return Path(arg).expanduser()
 
 
 def need_tools(*names: str) -> None:
@@ -100,7 +111,34 @@ def main() -> None:
 
     sub.add_parser("policy", help="print the default sign-off rules as a starting signoff.toml")
 
+    gt = sub.add_parser("gate", help="check commits about to be pushed (used by the pre-push hook)")
+    gt.add_argument("--repo", default=".")
+    gt.add_argument("--policy", help="default: signoff.toml at the repo root if present, else the built-in tiers")
+    gt.add_argument("--model", default="haiku")
+    gt.add_argument("--transcripts", default="auto")
+    gt.add_argument("hook_args", nargs="*", help="remote name and URL, passed by git")
+
+    ap_ = sub.add_parser("approve", help="approve held commits (must be typed in a terminal by a person)")
+    ap_.add_argument("ids", nargs="+", help="commit ids from the hold message")
+    ap_.add_argument("--repo", default=".")
+
+    hk = sub.add_parser("hook", help="install the pre-push hook in a repo")
+    hk.add_argument("action", choices=["install"])
+    hk.add_argument("--repo", default=".")
+    hk.add_argument("--force", action="store_true", help="replace an existing pre-push hook")
+
     args = ap.parse_args()
+    if args.cmd in ("gate", "approve", "hook"):
+        from . import gate
+        repo = Path(args.repo).expanduser().resolve()
+        if args.cmd == "hook":
+            sys.exit(gate.install_hook(repo, args.force))
+        if args.cmd == "approve":
+            sys.exit(gate.approve(repo, args.ids))
+        need_tools("git", "claude")
+        lines = None if sys.stdin.isatty() else [l for l in sys.stdin.read().splitlines() if l.strip()]
+        sys.exit(gate.check(repo, HOME / repo.name, gate.repo_policy(repo, args.policy), transcripts_dir(args.transcripts),
+                            model=args.model, lines=lines))
     if args.cmd == "policy":
         print(policy.DEFAULT, end="")
     elif args.cmd == "feed":
@@ -109,13 +147,9 @@ def main() -> None:
     elif args.cmd == "scan":
         need_tools("git", "claude")
         repo = Path(args.repo).expanduser().resolve()
-        if args.transcripts == "none":
-            tdir = None
-        elif args.transcripts == "auto":
-            tdir = Path.home() / ".claude" / "projects"
-            tdir = tdir if tdir.exists() else None
-        else:
-            tdir = Path(args.transcripts).expanduser()
+        tdir = transcripts_dir(args.transcripts)
+        if not args.policy and (repo / "signoff.toml").exists():
+            args.policy = str(repo / "signoff.toml")
         out = Path(args.out).expanduser() if args.out else HOME / repo.name
         changes = sources.git_changes(repo, out, since=args.since, limit=args.limit, transcripts=tdir,
                                       agent_only=args.agent_only)

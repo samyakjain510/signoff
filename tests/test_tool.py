@@ -3,6 +3,7 @@
 Run: python3 -m unittest tests/test_tool.py
 """
 import unittest
+from pathlib import Path
 
 from signoff import checks, diffs, feed, llm, policy, review, sources
 
@@ -113,6 +114,46 @@ class AgentDetectionTests(unittest.TestCase):
         self.assertEqual(sources.pr_agent({"user": {"login": "x"}, "body": "Generated with [Claude Code](https://claude.com/claude-code)"}), "claude")
         self.assertEqual(sources.pr_agent({"user": {"login": "Copilot"}, "body": ""}), "copilot")
         self.assertEqual(sources.pr_agent({"user": {"login": "x"}, "body": "https://app.devin.ai/sessions/abc"}), "devin")
+
+
+class GateTests(unittest.TestCase):
+    def setUp(self):
+        import subprocess, tempfile
+        self.dir = Path(tempfile.mkdtemp())
+        run = lambda *a, cwd=self.dir: subprocess.run(a, cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+        self.run = run
+        run("git", "init", "-q", "-b", "main")
+        run("git", "config", "user.email", "t@example.com")
+        run("git", "config", "user.name", "t")
+        for i in range(3):
+            (self.dir / f"f{i}.txt").write_text(str(i))
+            run("git", "add", ".")
+            run("git", "commit", "-q", "-m", f"c{i}")
+        self.shas = run("git", "rev-list", "--reverse", "HEAD").split()
+
+    def test_pending_reads_the_pre_push_range(self):
+        from signoff import gate
+        line = f"refs/heads/main {self.shas[2]} refs/heads/main {self.shas[0]}"
+        self.assertEqual(gate.pending(self.dir, [line]), self.shas[1:])
+        deleting = f"(delete) {gate.ZERO} refs/heads/old {self.shas[0]}"
+        self.assertEqual(gate.pending(self.dir, [deleting]), [])
+
+    def test_agent_cannot_approve(self):
+        import io
+        from signoff import gate
+        class NotATerminal(io.StringIO):
+            def isatty(self):
+                return False
+        self.assertEqual(gate.approve(self.dir, [self.shas[1][:7]], stdin=NotATerminal("yes\n")), 2)
+        self.assertEqual(gate.approved(self.dir), set())
+
+    def test_hook_is_not_clobbered(self):
+        from signoff import gate
+        hook = self.dir / ".git" / "hooks" / "pre-push"
+        hook.write_text("#!/bin/sh\nexit 0\n")
+        self.assertEqual(gate.install_hook(self.dir), 1)
+        self.assertEqual(gate.install_hook(self.dir, force=True), 0)
+        self.assertIn("signoff gate", hook.read_text())
 
 
 class SafetyTests(unittest.TestCase):
