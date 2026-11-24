@@ -16,7 +16,7 @@ TYPE_NAMES = {"user_facing": "User-facing", "scope": "Scope", "data_privacy": "D
 WHO_NAMES = {"agent": "Agent's own call", "implied": "Implied by the request", "asked": "Asked for"}
 
 
-def feed_data(name: str, changes: list[dict], reviews: dict[str, dict], pol: dict) -> dict:
+def feed_data(name: str, changes: list[dict], reviews: dict[str, dict], pol: dict, note: str = "") -> dict:
     items = []
     for ch in changes:
         r = reviews.get(ch["id"], {})
@@ -33,7 +33,7 @@ def feed_data(name: str, changes: list[dict], reviews: dict[str, dict], pol: dic
             "checks": sorted({f["check"] for f in ch.get("findings", [])}),
         })
     dates = [i["date"] for i in items if i["date"]]
-    return {"name": name, "from": min(dates, default=""), "to": max(dates, default=""),
+    return {"name": name, "note": note, "from": min(dates, default=""), "to": max(dates, default=""),
             "policy": policy.as_matrix(pol), "default_policy": policy.as_matrix(policy.load()),
             "types": TYPE_NAMES, "who": WHO_NAMES, "changes": items}
 
@@ -73,8 +73,9 @@ def html_feed(data: dict) -> str:
     return PAGE.replace("__DATA__", blob).replace("__TITLE__", "Signoff feed")
 
 
-def write(out_dir: Path, name: str, changes: list[dict], reviews: dict[str, dict], pol: dict) -> tuple[Path, str]:
-    data = feed_data(name, changes, reviews, pol)
+def write(out_dir: Path, name: str, changes: list[dict], reviews: dict[str, dict], pol: dict,
+          note: str = "") -> tuple[Path, str]:
+    data = feed_data(name, changes, reviews, pol, note)
     page = out_dir / "feed.html"
     page.write_text(html_feed(data))
     return page, text_feed(data)
@@ -97,6 +98,7 @@ body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-sy
 main { max-width:820px; margin:0 auto; padding:28px 16px 80px; }
 h1 { font-size:24px; line-height:1.25; margin:0 0 4px; }
 .sub { color:var(--muted); margin:0 0 18px; }
+.note { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; margin:-6px 0 16px; }
 .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:0 0 16px; }
 .tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; text-align:left; color:inherit; font:inherit; }
 .tile b { display:block; font-size:24px; line-height:1.1; }
@@ -105,7 +107,8 @@ h1 { font-size:24px; line-height:1.25; margin:0 0 4px; }
 details.rules { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:0 0 16px; }
 details.rules summary { cursor:pointer; font-weight:600; }
 .rules p { color:var(--muted); font-size:13px; margin:6px 0 10px; }
-.grid { width:100%; border-collapse:collapse; font-size:13px; }
+.grid { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+.grid th:first-child, .grid td:first-child { width:31%; }
 .grid th, .grid td { padding:5px 4px; border-top:1px solid var(--line); text-align:left; vertical-align:middle; }
 .grid th { font-weight:600; color:var(--muted); }
 .grid select { width:100%; font:inherit; padding:3px; border:1px solid var(--line); border-radius:6px; background:var(--soft); color:var(--ink); }
@@ -134,9 +137,10 @@ pre { background:var(--soft); border-radius:6px; padding:8px; font-size:12px; wh
 .warn { color:var(--read); font-size:13px; }
 .empty { color:var(--muted); text-align:center; padding:30px 0; }
 footer { color:var(--muted); font-size:13px; margin-top:28px; }
-@media (max-width:520px) { .tiles { grid-template-columns:1fr; } .tile b { display:inline; font-size:18px; margin-right:6px; } }
+@media (max-width:520px) { .grid { font-size:12px; } .grid select { font-size:12px; padding:2px 0; } .grid th, .grid td { padding:4px 2px; }
+  .tiles { grid-template-columns:1fr; } .tile b { display:inline; font-size:18px; margin-right:6px; } }
 </style></head><body><main>
-<h1 id="h"></h1><p class="sub" id="sub"></p>
+<h1 id="h"></h1><p class="sub" id="sub"></p><p class="note" id="note" hidden></p>
 <div class="tiles">
   <button class="tile" data-f="sign-off"><b id="n-hold">0</b><span>need your sign-off</span></button>
   <button class="tile" data-f="notify"><b id="n-read">0</b><span>to read when you can</span></button>
@@ -168,7 +172,7 @@ function act(d) {
   if (a === "sign-off" && d.evidence_ok === false) a = "notify";
   return a;
 }
-function top(c) { return c.decisions.reduce((m, d) => rank(act(d)) > rank(m) ? act(d) : m, "silent"); }
+function topAction(c) { return c.decisions.reduce((m, d) => rank(act(d)) > rank(m) ? act(d) : m, "silent"); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(pol)); } catch (e) {} }
 function select(val, onchange, allowBlank) {
   const s = el("select");
@@ -196,7 +200,7 @@ function toml() {
   return lines.join("\n");
 }
 function card(c) {
-  const a = top(c), box = el("section", "card"), t = el("div", "top");
+  const a = topAction(c), box = el("section", "card"), t = el("div", "top");
   t.appendChild(el("span", "pill " + a, STATUS[a]));
   const title = el("span", "title");
   if (c.url) { const l = el("a", null, c.title); l.href = c.url; l.rel = "noopener"; title.appendChild(l); } else title.textContent = c.title;
@@ -224,19 +228,20 @@ function card(c) {
   return box;
 }
 function render() {
-  const tops = DATA.changes.map(top);
+  const tops = DATA.changes.map(topAction);
   document.getElementById("n-hold").textContent = tops.filter(a => a === "sign-off").length;
   document.getElementById("n-read").textContent = tops.filter(a => a === "notify").length;
   document.getElementById("n-all").textContent = DATA.changes.length;
   document.querySelectorAll(".tile").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter));
   const list = document.getElementById("list"); list.textContent = "";
-  const shown = DATA.changes.slice().reverse().filter(c => filter === "all" || top(c) === filter);
+  const shown = DATA.changes.slice().reverse().filter(c => filter === "all" || topAction(c) === filter);
   shown.forEach(c => list.appendChild(card(c)));
   if (!shown.length) list.appendChild(el("p", "empty", filter === "sign-off" ? "Nothing is waiting for your sign-off." : "Nothing here."));
   const tx = document.getElementById("toml"); if (!tx.hidden) tx.value = toml();
 }
 document.getElementById("h").textContent = "What changed in " + DATA.name;
 document.getElementById("sub").textContent = DATA.changes.length + " changes" + (DATA.from ? ", " + DATA.from + " to " + DATA.to : "");
+if (DATA.note) { const n = document.getElementById("note"); n.textContent = DATA.note; n.hidden = false; }
 document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => { filter = b.dataset.f; render(); }));
 document.getElementById("reset").addEventListener("click", () => { pol = JSON.parse(JSON.stringify(DATA.default_policy)); save(); grid(); render(); });
 document.getElementById("export").addEventListener("click", () => { const tx = document.getElementById("toml"); tx.hidden = !tx.hidden; tx.value = toml(); });

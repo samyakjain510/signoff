@@ -58,9 +58,9 @@ def run(changes: list[dict], out: Path, name: str, args) -> None:
     show(out, name, args.policy, args.text)
 
 
-def show(out: Path, name: str, policy_path: str | None, text: bool) -> None:
+def show(out: Path, name: str, policy_path: str | None, text: bool, note: str = "") -> None:
     changes = load_jsonl(out / "changes.jsonl")
-    page, txt = feed.write(out, name, changes, latest_reviews(out / "reviews.jsonl"), policy.load(policy_path))
+    page, txt = feed.write(out, name, changes, latest_reviews(out / "reviews.jsonl"), policy.load(policy_path), note)
     if text:
         print(txt)
     print(f"Feed: {page}")
@@ -95,6 +95,8 @@ def main() -> None:
     f.add_argument("out")
     f.add_argument("--policy")
     f.add_argument("--text", action="store_true")
+    f.add_argument("--name", help="name shown in the page heading (default: the folder name)")
+    f.add_argument("--note", default="", help="a line of context shown under the heading")
 
     sub.add_parser("policy", help="print the default sign-off rules as a starting signoff.toml")
 
@@ -103,7 +105,7 @@ def main() -> None:
         print(policy.DEFAULT, end="")
     elif args.cmd == "feed":
         out = Path(args.out).expanduser()
-        show(out, out.name, args.policy, args.text)
+        show(out, args.name or out.name, args.policy, args.text, args.note)
     elif args.cmd == "scan":
         need_tools("git", "claude")
         repo = Path(args.repo).expanduser().resolve()

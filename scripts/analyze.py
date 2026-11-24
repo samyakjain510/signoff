@@ -180,6 +180,32 @@ def analyze() -> dict:
             notify_commits += 1
     res["policies"]["F"]["notify_only_commits"] = notify_commits
 
+    # How often each kind of decision was later corrected, by who made it.
+    corrected_any = {g["id"] for g in g_agent + g_asked}
+    by_who = Counter()
+    corr_by_who = Counter()
+    for c in d["commits"]:
+        for i, dec in enumerate(d["ref"].get(c["sha"], [])):
+            by_who[dec["who"]] += 1
+            corr_by_who[dec["who"]] += f"{c['repo'][:2]}-{c['short']}-{i}" in corrected_any
+    res["correction_rate_by_who"] = {w: stats.pct(corr_by_who[w], by_who[w]) for w in ("agent", "implied", "asked")}
+    any_sha = {g["sha"] for g in g_agent + g_asked}
+    res["commits_with_any_later_corrected_decision"] = len(any_sha)
+    for p in POLICIES + ["F_ref"]:
+        h = held(d, p)
+        res["policies"][p]["hit_rate_any_corrected"] = stats.pct(sum(1 for sha in h if sha in any_sha), len(h))
+    # What triggered holds under the default tiers.
+    trig = Counter()
+    for sha, decs in held(d, "F").items():
+        for x in decs:
+            trig[f"{x['who']}/{x['type']}/{x['undo']}"] += 1
+    res["policies"]["F"]["hold_triggers"] = dict(trig.most_common())
+    res["policies"]["F"]["held_decisions"] = sum(trig.values())
+    # Agent decisions the reference labels call hard to undo: does the tool's default hold them?
+    hard_sha = {c["sha"] for c in d["commits"] for x in d["ref"].get(c["sha"], []) if x["who"] == "agent" and x["undo"] == "hard"}
+    hf = held(d, "F")
+    res["reference_agent_hard"] = {"commits": len(hard_sha), "held_by_F": stats.pct(sum(1 for s in hard_sha if s in hf), len(hard_sha))}
+
     # Tool vs reference labels.
     tp_tool = tp_ref = n_tool = n_ref = n_ref_agent = tp_ref_agent = 0
     who_pairs = []
@@ -210,6 +236,7 @@ def analyze() -> dict:
         "recall_agent_decisions": stats.pct(tp_ref_agent, n_ref_agent),
         "who_agreement": stats.pct(sum(a == b for a, b in who_pairs), len(who_pairs)),
         "who_kappa": round(stats.cohen_kappa([a for a, _ in who_pairs], [b for _, b in who_pairs]), 3) if who_pairs else None,
+        "who_confusion_reference_to_tool": {f"{a}->{b}": n for (a, b), n in sorted(Counter(who_pairs).items())},
         "tool_decisions_with_no_verified_evidence": stats.pct(unverified, n_tool),
         "tool_who_downgraded_for_missing_quote": stats.pct(who_downgraded, n_tool),
         "tool_who_counts": dict(Counter(t["who"] for row in d["tool"].values() for t in row["out"]["decisions"])),
@@ -263,6 +290,10 @@ def analyze() -> dict:
 
 if __name__ == "__main__":
     out = analyze()
+    # Aggregates only in results/ (it goes public with the repo). The list of
+    # corrected decisions describes private work, so it stays in git-ignored data/.
     (ROOT / "results").mkdir(exist_ok=True)
-    (ROOT / "results" / "own_repos.json").write_text(json.dumps(out, indent=2))
-    print(json.dumps({k: v for k, v in out.items() if k != "g_list"}, indent=2))
+    (DATA / "eval" / "own_details.json").write_text(json.dumps(out["g_list"], indent=2))
+    agg = {k: v for k, v in out.items() if k != "g_list"}
+    (ROOT / "results" / "own_repos.json").write_text(json.dumps(agg, indent=2))
+    print(json.dumps(agg, indent=2))

@@ -4,7 +4,7 @@ Run: python3 -m unittest tests/test_tool.py
 """
 import unittest
 
-from signoff import checks, diffs, feed, llm, policy, review
+from signoff import checks, diffs, feed, llm, policy, review, sources
 
 
 def chunk(path: str, n: int) -> str:
@@ -102,6 +102,17 @@ class PackageFromDiffTests(unittest.TestCase):
         rec = {"sha": "pr1", "short": "pr1", "parents": [], "files": [{"status": "M", "path": "package.json"}]}
         found = [f for f in checks.run_checks(None, rec, diff) if f.check == "new_package"]
         self.assertEqual([f.text for f in found], ["dependencies: botid ^1.4.0"])
+
+
+class AgentDetectionTests(unittest.TestCase):
+    def test_review_bot_badge_is_not_authorship(self):
+        pr = {"user": {"login": "maintainer"}, "body": "Adds spaces.\n<!-- devin-review-badge-begin --> https://app.devin.ai/review/x"}
+        self.assertIsNone(sources.pr_agent(pr))
+
+    def test_signatures_and_accounts(self):
+        self.assertEqual(sources.pr_agent({"user": {"login": "x"}, "body": "Generated with [Claude Code](https://claude.com/claude-code)"}), "claude")
+        self.assertEqual(sources.pr_agent({"user": {"login": "Copilot"}, "body": ""}), "copilot")
+        self.assertEqual(sources.pr_agent({"user": {"login": "x"}, "body": "https://app.devin.ai/sessions/abc"}), "devin")
 
 
 class SafetyTests(unittest.TestCase):

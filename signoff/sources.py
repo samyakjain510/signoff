@@ -18,11 +18,17 @@ from pathlib import Path
 from . import checks, gitlog, requests
 
 SPEC_CHARS = 10_000
-AGENT_PR = re.compile(
-    r"(chatgpt\.com/codex|app\.devin\.ai|Generated with \[?Claude Code|co-authored-by:\s*claude|"
-    r"cursor\.com/(agents|background)|copilot-swe-agent|devin-ai-integration)", re.I)
-AGENT_LOGINS = {"Copilot": "copilot", "devin-ai-integration[bot]": "devin", "cursor[bot]": "cursor",
-                "claude[bot]": "claude", "chatgpt-codex-connector[bot]": "codex"}
+# Signs that an agent wrote a pull request. Review bots (for example a "Devin Review"
+# badge) are not authors, so only session links and authorship lines count.
+AGENT_SIGNS = [
+    ("claude", re.compile(r"Generated with \[?Claude Code|co-authored-by:\s*claude", re.I)),
+    ("codex", re.compile(r"chatgpt\.com/codex", re.I)),
+    ("devin", re.compile(r"app\.devin\.ai/sessions", re.I)),
+    ("cursor", re.compile(r"cursor\.com/(agents|background)|co-authored-by:\s*cursor", re.I)),
+    ("copilot", re.compile(r"copilot-swe-agent", re.I)),
+]
+AGENT_LOGINS = {"Copilot": "copilot", "copilot-swe-agent[bot]": "copilot", "devin-ai-integration[bot]": "devin",
+                "cursor[bot]": "cursor", "claude[bot]": "claude", "chatgpt-codex-connector[bot]": "codex"}
 
 
 def make_change(*, id: str, kind: str, title: str, date: str, url: str, agent: str | None, agent_text: str,
@@ -111,21 +117,30 @@ def gh_diff(repo: str, number: int, dest: Path, max_bytes: int = 2_000_000) -> b
 
 
 def pr_agent(pr: dict) -> str | None:
+    """Agent named by the PR itself: an agent account opened it, or its text carries an agent's signature."""
     login = (pr.get("user") or {}).get("login", "")
     if login in AGENT_LOGINS:
         return AGENT_LOGINS[login]
-    text = (pr.get("body") or "") + " " + (pr.get("head") or {}).get("ref", "")
-    m = AGENT_PR.search(text)
-    if m:
-        s = m.group(0).lower()
-        for name in ("codex", "devin", "claude", "cursor", "copilot"):
-            if name in s:
-                return name
-        return "agent"
-    ref = (pr.get("head") or {}).get("ref", "")
-    for name in ("codex", "devin", "claude", "cursor", "copilot"):
-        if ref.startswith(name + "/") or ref.startswith(name + "-"):
+    body = pr.get("body") or ""
+    for name, rx in AGENT_SIGNS:
+        if rx.search(body):
             return name
+    return None
+
+
+def commit_agent(repo: str, number: int) -> str | None:
+    """Agent named in the PR's commits: a Co-Authored-By line, or an agent account as author."""
+    try:
+        commits = gh_json(f"repos/{repo}/pulls/{number}/commits?per_page=100")
+    except RuntimeError:
+        return None
+    for c in commits:
+        login = (c.get("author") or {}).get("login", "")
+        if login in AGENT_LOGINS:
+            return AGENT_LOGINS[login]
+        found = gitlog.agent_of([x.strip() for x in gitlog.TRAILER.findall(c["commit"].get("message", ""))])
+        if found:
+            return found
     return None
 
 
@@ -157,8 +172,13 @@ def github_changes(repo: str, out_dir: Path, prs: int = 20, agent_only: bool = F
             if not batch:
                 break
             for pr in batch:
-                if pr.get("merged_at") and (not agent_only or pr_agent(pr)):
+                if not pr.get("merged_at"):
+                    continue
+                pr["_agent"] = pr_agent(pr) or commit_agent(repo, pr["number"])
+                if not agent_only or pr["_agent"]:
                     pulls.append(pr)
+                if len(pulls) >= prs:
+                    break
             page += 1
         pulls = pulls[:prs]
     changes = []
@@ -176,7 +196,7 @@ def github_changes(repo: str, out_dir: Path, prs: int = 20, agent_only: bool = F
         spec, spec_source = linked_issue(repo, pr)
         changes.append(make_change(
             id=f"pr{n}", kind="pr", title=pr.get("title", ""), date=pr.get("merged_at") or "",
-            url=pr.get("html_url", ""), agent=pr_agent(pr),
+            url=pr.get("html_url", ""), agent=pr["_agent"] if "_agent" in pr else (pr_agent(pr) or commit_agent(repo, n)),
             agent_text=(pr.get("title", "") + "\n\n" + (pr.get("body") or "")).strip(),
             spec=spec, spec_source=spec_source, spec_carried=False, files=files, findings=findings, diff_path=dest))
     return changes

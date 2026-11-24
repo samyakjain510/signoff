@@ -1,0 +1,213 @@
+{
+  "commits": 60,
+  "active_weeks": 4,
+  "active_days": 7,
+  "commits_reviewed_by_tool": 60,
+  "ground_truth": {
+    "agent_or_implied_later_corrected": 5,
+    "asked_then_changed": 13,
+    "corrections_matching_no_listed_decision": 12,
+    "hard_to_undo_in_g": 0,
+    "commits_with_g": 5
+  },
+  "policies": {
+    "A": {
+      "name": "Every commit",
+      "held_commits": 60,
+      "held_share": "60/60 (100%)",
+      "per_active_week": 15.0,
+      "g_commit_held": "5/5 (100%)",
+      "g_commit_held_ci95": [
+        0.57,
+        1.0
+      ],
+      "hit_rate": "5/60 (8%)",
+      "hit_rate_any_corrected": "13/60 (22%)"
+    },
+    "B": {
+      "name": "Paths (CODEOWNERS-style)",
+      "held_commits": 40,
+      "held_share": "40/60 (67%)",
+      "per_active_week": 10.0,
+      "g_commit_held": "4/5 (80%)",
+      "g_commit_held_ci95": [
+        0.38,
+        0.96
+      ],
+      "hit_rate": "4/40 (10%)",
+      "hit_rate_any_corrected": "12/40 (30%)"
+    },
+    "C": {
+      "name": "Code checks only",
+      "held_commits": 21,
+      "held_share": "21/60 (35%)",
+      "per_active_week": 5.2,
+      "g_commit_held": "3/5 (60%)",
+      "g_commit_held_ci95": [
+        0.23,
+        0.88
+      ],
+      "hit_rate": "3/21 (14%)",
+      "hit_rate_any_corrected": "9/21 (43%)"
+    },
+    "D": {
+      "name": "Tool, any decision",
+      "held_commits": 56,
+      "held_share": "56/60 (93%)",
+      "per_active_week": 14.0,
+      "g_commit_held": "5/5 (100%)",
+      "g_commit_held_ci95": [
+        0.57,
+        1.0
+      ],
+      "hit_rate": "5/56 (9%)",
+      "g_decision_held": "5/5 (100%)",
+      "g_decision_held_ci95": [
+        0.57,
+        1.0
+      ],
+      "hit_rate_any_corrected": "13/56 (23%)"
+    },
+    "E": {
+      "name": "Tool, agent decisions",
+      "held_commits": 48,
+      "held_share": "48/60 (80%)",
+      "per_active_week": 12.0,
+      "g_commit_held": "4/5 (80%)",
+      "g_commit_held_ci95": [
+        0.38,
+        0.96
+      ],
+      "hit_rate": "4/48 (8%)",
+      "g_decision_held": "4/5 (80%)",
+      "g_decision_held_ci95": [
+        0.38,
+        0.96
+      ],
+      "hit_rate_any_corrected": "11/48 (23%)"
+    },
+    "F": {
+      "name": "Tool, default tiers",
+      "held_commits": 20,
+      "held_share": "20/60 (33%)",
+      "per_active_week": 5.0,
+      "g_commit_held": "2/5 (40%)",
+      "g_commit_held_ci95": [
+        0.12,
+        0.77
+      ],
+      "hit_rate": "2/20 (10%)",
+      "g_decision_held": "2/5 (40%)",
+      "g_decision_held_ci95": [
+        0.12,
+        0.77
+      ],
+      "g_decision_shown": "5/5 (100%)",
+      "g_decision_shown_ci95": [
+        0.57,
+        1.0
+      ],
+      "notify_only_commits": 32,
+      "hit_rate_any_corrected": "7/20 (35%)",
+      "hold_triggers": {
+        "agent/data_privacy/easy": 25,
+        "agent/data_privacy/hard": 11,
+        "implied/data_privacy/hard": 5,
+        "agent/removed_feature/easy": 3,
+        "agent/dependency_cost/hard": 3,
+        "implied/dependency_cost/hard": 2,
+        "agent/user_facing/hard": 2,
+        "agent/scope/hard": 1
+      },
+      "held_decisions": 52
+    },
+    "F_ref": {
+      "name": "Default tiers on reference labels",
+      "held_commits": 13,
+      "held_share": "13/60 (22%)",
+      "per_active_week": 3.2,
+      "g_commit_held": "2/5 (40%)",
+      "g_commit_held_ci95": [
+        0.12,
+        0.77
+      ],
+      "hit_rate": "2/13 (15%)",
+      "hit_rate_any_corrected": "4/13 (31%)"
+    }
+  },
+  "correction_rate_by_who": {
+    "agent": "1/50 (2%)",
+    "implied": "4/36 (11%)",
+    "asked": "13/63 (21%)"
+  },
+  "commits_with_any_later_corrected_decision": 13,
+  "reference_agent_hard": {
+    "commits": 4,
+    "held_by_F": "4/4 (100%)"
+  },
+  "tool_vs_reference": {
+    "tool_decisions": 274,
+    "reference_decisions": 149,
+    "precision": "225/274 (82%)",
+    "recall": "145/149 (97%)",
+    "recall_agent_decisions": "48/50 (96%)",
+    "who_agreement": "93/145 (64%)",
+    "who_kappa": 0.434,
+    "who_confusion_reference_to_tool": {
+      "agent->agent": 26,
+      "agent->asked": 16,
+      "agent->implied": 6,
+      "asked->agent": 4,
+      "asked->asked": 53,
+      "asked->implied": 5,
+      "implied->agent": 14,
+      "implied->asked": 7,
+      "implied->implied": 14
+    },
+    "tool_decisions_with_no_verified_evidence": "3/274 (1%)",
+    "tool_who_downgraded_for_missing_quote": "0/274 (0%)",
+    "tool_who_counts": {
+      "asked": 76,
+      "agent": 158,
+      "implied": 40
+    },
+    "reference_who_counts": {
+      "asked": 63,
+      "implied": 36,
+      "agent": 50
+    },
+    "recall_on_g": "5/5 (100%)"
+  },
+  "summaries": {
+    "pairs": 60,
+    "tool_summary": {
+      "aligned": 48,
+      "partial": 12
+    },
+    "commit_message": {
+      "aligned": 41,
+      "partial": 18,
+      "misaligned": 1
+    },
+    "tool_misleads": "0/60 (0%)",
+    "tool_misleads_ci95": [
+      0.0,
+      0.06
+    ],
+    "message_misleads": "1/60 (2%)",
+    "message_misleads_ci95": [
+      0.0,
+      0.09
+    ],
+    "discordant_tool_only": 0,
+    "discordant_message_only": 1,
+    "sign_test_p": 1.0
+  },
+  "tool_cost": {
+    "calls": 60,
+    "input_tokens_total": 597619,
+    "input_tokens_mean": 9960,
+    "seconds_mean": 18.2,
+    "api_equivalent_usd": 0.21
+  }
+}
