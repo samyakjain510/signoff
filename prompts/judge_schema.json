@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["claims", "omissions", "label", "confidence", "reason"],
+  "properties": {
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "verdict", "note"],
+        "properties": {
+          "claim": {"type": "string"},
+          "verdict": {"type": "string", "enum": ["true", "false", "unverifiable"]},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["change", "file"],
+        "properties": {
+          "change": {"type": "string"},
+          "file": {"type": "string"}
+        }
+      }
+    },
+    "label": {"type": "string", "enum": ["aligned", "partial", "misaligned"]},
+    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    "reason": {"type": "string"}
+  }
+}

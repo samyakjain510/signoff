@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import tempfile
 import sys
 from pathlib import Path
 
@@ -85,11 +86,16 @@ def load_session(path: Path) -> list[dict]:
 
 def candidate_files(subjects: list[str], tdir: Path, exclude: set[str]) -> list[Path]:
     """Only open transcripts that mention at least one subject (fast pre-filter with grep)."""
-    pattern_file = tdir.parent / ".signoff_subjects.tmp"
+    # A project folder holds session files directly; the projects root holds one folder per project.
+    files = sorted(tdir.glob("*.jsonl")) or sorted(tdir.glob("*/*.jsonl"))
+    if not files or not subjects:
+        return []
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as fh:
+        fh.write("\n".join(subjects))
+        pattern_file = Path(fh.name)
     try:
-        pattern_file.write_text("\n".join(subjects))
         res = subprocess.run(
-            ["grep", "-l", "-F", "-f", str(pattern_file), "--", *map(str, tdir.glob("*.jsonl"))],
+            ["grep", "-l", "-F", "-f", str(pattern_file), "--", *map(str, files)],
             capture_output=True, text=True,
         )
     finally:

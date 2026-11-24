@@ -1,0 +1,11 @@
+{
+  "name": "signoff",
+  "owner": {"name": "Samyak Jain"},
+  "plugins": [
+    {
+      "name": "signoff",
+      "source": "./",
+      "description": "A plain-language feed of what your coding agent changed, with product decisions flagged and the ones you choose held for your sign-off."
+    }
+  ]
+}

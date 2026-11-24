@@ -85,12 +85,47 @@ def git_show(repo: Path, rev: str, path: str) -> str | None:
 
 # ---- individual checks -------------------------------------------------------
 
-def new_packages(repo: Path, rec: dict) -> list[Finding]:
+DEP_SECTION = re.compile(r'"((?:dev|peer|optional)?[dD]ependencies)"\s*:\s*\{')
+PKG_LINE = re.compile(r'^\s*"(@?[A-Za-z0-9._/-]+)"\s*:\s*"([^"]*)",?\s*$')
+
+
+def packages_from_diff(chunk: str) -> dict[str, set[str]]:
+    """Added and removed package names in a package.json diff, without the full file.
+    Tracks which dependencies section each line sits in from the surrounding lines."""
+    out: dict[str, set[str]] = {"+": set(), "-": set()}
+    section = None
+    for raw in chunk.splitlines():
+        if raw.startswith(("+++", "---", "@@", "diff ")):
+            if raw.startswith("@@"):
+                section = None
+            continue
+        sign, body = (raw[0], raw[1:]) if raw[:1] in "+- " and raw else (" ", raw)
+        m = DEP_SECTION.search(body)
+        if m:
+            section = m.group(1)
+            continue
+        if section and body.strip().startswith("}"):
+            section = None
+            continue
+        pm = PKG_LINE.match(body)
+        if section and pm and sign in "+-":
+            out[sign].add(f"{section}: {pm.group(1)} {pm.group(2)}")
+    return out
+
+
+def new_packages(repo: Path | None, rec: dict) -> list[Finding]:
     out = []
     parent = rec["parents"][0] if rec["parents"] else None
     for f in rec["files"]:
         path = f["path"]
-        if path.endswith("package.json") and "node_modules" not in path:
+        if path.endswith("package.json") and "node_modules" not in path and repo is None:
+            chunk = _RAW_CHUNKS.get(rec["sha"], {}).get(path, "")
+            got = packages_from_diff(chunk)
+            removed_names = {x.split(" ")[1] for x in got["-"]}
+            for item in sorted(got["+"]):
+                if item.split(" ")[1] not in removed_names:
+                    out.append(Finding("new_package", DEP, path, None, item))
+        elif path.endswith("package.json") and "node_modules" not in path:
             after = git_show(repo, rec["sha"], path)
             before = git_show(repo, parent, path) if parent else None
             try:
@@ -191,8 +226,19 @@ def parse_diff_cache(rec: dict) -> dict[str, dict]:
     return _DIFF_CACHE.get(rec["sha"], {})
 
 
-def run_checks(repo: Path, rec: dict, diff: str) -> list[Finding]:
+_RAW_CHUNKS: dict[str, dict[str, str]] = {}
+
+
+def run_checks(repo: Path | None, rec: dict, diff: str) -> list[Finding]:
+    """repo=None means no local clone (a GitHub pull request): package changes are read from the diff."""
     _DIFF_CACHE[rec["sha"]] = parse_diff(diff)
+    if repo is None:
+        chunks = {}
+        for part in re.split(r"(?m)^(?=diff --git )", diff):
+            m = re.match(r"diff --git a/(\S+) b/(\S+)", part)
+            if m:
+                chunks[m.group(2)] = part
+        _RAW_CHUNKS[rec["sha"]] = chunks
     return new_packages(repo, rec) + file_checks(rec) + line_checks(rec)
 
 

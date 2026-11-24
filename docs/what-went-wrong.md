@@ -2,6 +2,20 @@
 
 Mistakes and surprises, and what changed because of them. Material for the write-up.
 
+## 2026-11-23: the first judge failed its own bar
+
+Before using a model to say whether a summary misleads, we tested it on PRs that two human researchers had already labeled (PR-MCI). The bar, written down before the run, was Cohen's kappa of at least 0.6 on aligned vs not aligned. Judge v1 scored 0.29.
+
+It was too strict. Of 24 descriptions the humans called aligned, it marked 15 as partial, almost always for leaving out a detail: a side effect of the main change, an extra test, a helper. Some of its points were fair (one PR quietly stopped CI from running on pull requests, and the humans did not count that against the description). But the humans' standard was "does the description get the main change right," and v1's was "does it mention everything a reviewer might want."
+
+**What changed:** v2 counts only significant omissions, ones a reader relying on the description would be surprised by. Because v2 was written after reading v1's mistakes on those 72 PRs, it was scored on 72 different PRs it had never seen, against the same bar. It passed: kappa 0.69 on aligned vs not, and 0.68 on misaligned vs the rest, the split the "misleads" measure uses. It found 22 of 24 misaligned descriptions, but about 3 in 10 of its "misaligned" calls were PRs the humans called partial, so it leans harsh.
+
+**Why it matters:** an unchecked judge would have reported most descriptions as flawed. Every judge number in the write-up sits next to its calibration result.
+
+## 2026-11-23: one calibration PR was blocked by a safety filter
+
+One test PR (a security-related code change) was blocked by Anthropic's cybersecurity safeguards on every attempt. It was left out, so the test set has 71 PRs, not 72. The same filter could block the tool on real security work; the tool records the error and shows the change as "not reviewed" rather than hiding it.
+
 ## 2026-11-22: the first code checks raised 125 false alarms on a site with no logins
 
 The first version of the "access rules" check matched any line containing `role=`. Every SVG drawing in the portfolio carries `role="img"`, an accessibility label for screen readers, so the check fired 125 times on a site that has no user accounts. The "outside service" check also counted ordinary links to papers and LinkedIn as if the site were calling those services.

@@ -1,0 +1,10 @@
+{
+  "name": "signoff",
+  "version": "0.1.0",
+  "description": "A plain-language feed of what your coding agent changed, with product decisions flagged and the ones you choose held for your sign-off.",
+  "author": {"name": "Samyak Jain"},
+  "homepage": "https://github.com/samyakjain510/signoff",
+  "repository": "https://github.com/samyakjain510/signoff",
+  "license": "MIT",
+  "keywords": ["product management", "code review", "oversight", "agents"]
+}

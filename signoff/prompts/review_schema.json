@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "spec_quote", "decisions"],
+  "properties": {
+    "summary": {"type": "string"},
+    "spec_quote": {"type": "string"},
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "what", "why_it_matters", "who", "undo", "evidence", "request_quote"],
+        "properties": {
+          "type": {"type": "string", "enum": ["user_facing", "scope", "data_privacy", "dependency_cost", "removed_feature"]},
+          "what": {"type": "string"},
+          "why_it_matters": {"type": "string"},
+          "who": {"type": "string", "enum": ["asked", "implied", "agent"]},
+          "undo": {"type": "string", "enum": ["easy", "hard"]},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "quote"],
+              "properties": {"file": {"type": "string"}, "quote": {"type": "string"}}
+            }
+          },
+          "request_quote": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["matches", "other_corrections"],
+  "properties": {
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decision_id", "kind", "request_quote", "reason"],
+        "properties": {
+          "decision_id": {"type": "string"},
+          "kind": {"type": "string", "enum": ["reverse", "change"]},
+          "request_quote": {"type": "string"},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "other_corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["what", "request_quote"],
+        "properties": {
+          "what": {"type": "string"},
+          "request_quote": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "set": "test",
+  "judge": "v2",
+  "all": {
+    "n": 71,
+    "human_labels": {
+      "aligned": 23,
+      "partial": 24,
+      "misaligned": 24
+    },
+    "kappa_aligned_vs_not": 0.693,
+    "kappa_aligned_vs_not_ci95": [
+      0.479,
+      0.865
+    ],
+    "kappa_misaligned_vs_rest": 0.677,
+    "kappa_misaligned_vs_rest_ci95": [
+      0.495,
+      0.827
+    ],
+    "kappa_3way": 0.598,
+    "accuracy_3way": 0.732,
+    "recall": {
+      "aligned": "16/23 (70%)",
+      "partial": "14/24 (58%)",
+      "misaligned": "22/24 (92%)"
+    },
+    "misaligned_precision": "22/31 (71%)",
+    "confusion_human_to_judge": {
+      "aligned->aligned": 16,
+      "aligned->misaligned": 1,
+      "aligned->partial": 6,
+      "misaligned->misaligned": 22,
+      "misaligned->partial": 2,
+      "partial->aligned": 2,
+      "partial->misaligned": 8,
+      "partial->partial": 14
+    }
+  },
+  "validation_only": {
+    "n": 58,
+    "human_labels": {
+      "aligned": 23,
+      "partial": 24,
+      "misaligned": 11
+    },
+    "kappa_aligned_vs_not": 0.663,
+    "kappa_aligned_vs_not_ci95": [
+      0.437,
+      0.84
+    ],
+    "kappa_misaligned_vs_rest": 0.616,
+    "kappa_misaligned_vs_rest_ci95": [
+      0.389,
+      0.82
+    ],
+    "kappa_3way": 0.562,
+    "accuracy_3way": 0.707,
+    "recall": {
+      "aligned": "16/23 (70%)",
+      "partial": "14/24 (58%)",
+      "misaligned": "11/11 (100%)"
+    },
+    "misaligned_precision": "11/20 (55%)",
+    "confusion_human_to_judge": {
+      "aligned->aligned": 16,
+      "aligned->misaligned": 1,
+      "aligned->partial": 6,
+      "misaligned->misaligned": 11,
+      "partial->aligned": 2,
+      "partial->misaligned": 8,
+      "partial->partial": 14
+    }
+  },
+  "passes_bar_aligned_vs_not": true,
+  "passes_bar_misaligned_vs_rest": true,
+  "input_tokens": 591502
+}
