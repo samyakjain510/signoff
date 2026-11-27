@@ -1,5 +1,7 @@
 # What a sign-off rule would have caught in 60 commits my coding agent wrote
 
+> Draft, still under review. The wording may change.
+
 *I built a tool that tells a product manager what a coding agent changed and which decisions it made on its own. Then I replayed my own commit history through it and scored each sign-off rule against what I later went back and changed.*
 
 ## The problem
